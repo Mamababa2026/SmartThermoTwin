@@ -56,6 +56,65 @@ def load_jsonl(path):
         return pd.DataFrame()
 
 # -----------------------------
+# FONCTIONS DASHBOARD
+# -----------------------------
+def card(title, value, icon, unit="", color="#4A90E2"):
+    if isinstance(value, (int, float)):
+        value_str = f"{value:.2f}"
+    else:
+        value_str = str(value)
+    st.markdown(f"""
+    <div style="
+        background:#1E1E26;
+        padding:20px;
+        border-radius:16px;
+        border:1px solid #2E2E3A;
+        box-shadow:0px 0px 10px rgba(0,0,0,0.4);
+        margin-bottom:15px;
+    ">
+        <div style="font-size:24px; color:{color};">{icon} {title}</div>
+        <div style="font-size:32px; font-weight:700; color:white; margin-top:10px;">
+            {value_str} {unit}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def progress_bar(title, value, icon, unit="", max_value=100, color="#4A90E2"):
+    if isinstance(value, (int, float)):
+        pct = max(0, min(100, (value / max_value) * 100))
+        value_str = f"{value:.2f}"
+    else:
+        pct = 0
+        value_str = str(value)
+    st.markdown(f"""
+    <div style="
+        background:#1E1E26;
+        padding:20px;
+        border-radius:16px;
+        border:1px solid #2E2E3A;
+        margin-bottom:15px;
+    ">
+        <div style="font-size:22px; color:{color};">{icon} {title}</div>
+        <div style="color:white; font-size:18px; margin-top:8px;">
+            {value_str} {unit}
+        </div>
+        <div style="
+            height:12px;
+            background:#333;
+            border-radius:8px;
+            margin-top:10px;
+        ">
+            <div style="
+                width:{pct}%;
+                height:12px;
+                background:{color};
+                border-radius:8px;
+            "></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# -----------------------------
 # MENU LATERAL
 # -----------------------------
 st.sidebar.title("🏭 SmartThermoTwin")
@@ -80,10 +139,9 @@ page = st.sidebar.radio(
 )
 
 # -----------------------------
-# PAGE ACCUEIL ULTRA MODERNE
+# PAGE ACCUEIL
 # -----------------------------
 if page == "🏠 Accueil":
-
     st.markdown("""
     <style>
     .hero {
@@ -340,10 +398,10 @@ elif page == "🛠️ Salle de contrôle":
             st.error(a)
 
 # -----------------------------
-# PAGES SIMULATION
+# PAGE HVAC – DASHBOARD
 # -----------------------------
 elif page == "🌊 Circuit d’eau chaude HVAC":
-    st.markdown('<div class="big-title">🌊 Circuit d’eau chaude HVAC</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title">🌊 Dashboard HVAC – Circuit d’eau chaude</div>', unsafe_allow_html=True)
 
     data = {
         "hvac_temp_depart": random.uniform(70, 90),
@@ -359,10 +417,38 @@ elif page == "🌊 Circuit d’eau chaude HVAC":
 
     save_jsonl(data, MESSAGES_FILE)
     st.success("Mesures HVAC enregistrées.")
-    st.json(data)
 
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        card("Température départ", data["hvac_temp_depart"], "🔥", "°C")
+        card("Température retour", data["hvac_temp_retour"], "🔥", "°C")
+
+    with col2:
+        card("Pression", data["hvac_press"], "📏", "bar")
+        card("Débit", data["hvac_debit"], "🔄", "m³/h")
+
+    with col3:
+        card("Température chaudière", data["hvac_temp_chaudiere"], "🔥", "°C")
+        card("Température pompe", data["hvac_temp_pompe"], "⚙️", "°C")
+
+    progress_bar("Niveau d’eau", data["hvac_niveau_eau"], "💧", "%", max_value=100)
+
+    card("Vibration pompe", data["hvac_vib_pompe"], "📡", "mm/s")
+
+    card(
+        "État vanne motorisée",
+        "ON" if data["hvac_vanne_etat"] == "ON" else "OFF",
+        "🔘",
+        "",
+        color="#00FF88" if data["hvac_vanne_etat"] == "ON" else "#FF4444"
+    )
+
+# -----------------------------
+# PAGE ÉCHANGEURS – DASHBOARD
+# -----------------------------
 elif page == "♨️ Échangeurs de chaleur":
-    st.markdown('<div class="big-title">♨️ Échangeurs de chaleur</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title">♨️ Dashboard – Échangeurs de chaleur</div>', unsafe_allow_html=True)
 
     data = {
         "ech1_dt_chaud": random.uniform(15, 25),
@@ -386,10 +472,48 @@ elif page == "♨️ Échangeurs de chaleur":
 
     save_jsonl(data, MESSAGES_FILE)
     st.success("Mesures échangeurs enregistrées.")
-    st.json(data)
 
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        card("Éch1 ΔT chaud", data["ech1_dt_chaud"], "🔥", "°C")
+        card("Éch1 ΔT froid", data["ech1_dt_froid"], "❄️", "°C")
+
+    with col2:
+        card("Éch1 débit primaire", data["ech1_debit_primaire"], "🔄", "m³/h")
+        card("Éch1 débit secondaire", data["ech1_debit_secondaire"], "🔄", "m³/h")
+
+    with col3:
+        card("Éch1 pression primaire", data["ech1_press_primaire"], "📏", "bar")
+        card("Éch1 pression secondaire", data["ech1_press_secondaire"], "📏", "bar")
+
+    progress_bar("Éch1 efficacité", data["ech1_efficacite"], "📈", "%", max_value=100)
+    progress_bar("Éch1 encrassement", data["ech1_encrassement"], "🧪", "%", max_value=100, color="#FFAA00")
+
+    st.markdown("### Échangeur 2")
+
+    col4, col5, col6 = st.columns(3)
+
+    with col4:
+        card("Éch2 ΔT chaud", data["ech2_dt_chaud"], "🔥", "°C")
+        card("Éch2 ΔT froid", data["ech2_dt_froid"], "❄️", "°C")
+
+    with col5:
+        card("Éch2 débit primaire", data["ech2_debit_primaire"], "🔄", "m³/h")
+        card("Éch2 débit secondaire", data["ech2_debit_secondaire"], "🔄", "m³/h")
+
+    with col6:
+        card("Éch2 pression primaire", data["ech2_press_primaire"], "📏", "bar")
+        card("Éch2 pression secondaire", data["ech2_press_secondaire"], "📏", "bar")
+
+    progress_bar("Éch2 efficacité", data["ech2_efficacite"], "📈", "%", max_value=100)
+    progress_bar("Éch2 encrassement", data["ech2_encrassement"], "🧪", "%", max_value=100, color="#FFAA00")
+
+# -----------------------------
+# PAGE POMPE – DASHBOARD
+# -----------------------------
 elif page == "🔧 Pompe principale":
-    st.markdown('<div class="big-title">🔧 Pompe principale</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title">🔧 Dashboard – Pompe principale</div>', unsafe_allow_html=True)
 
     data = {
         "pompe_temp_moteur": random.uniform(65, 85),
@@ -402,10 +526,32 @@ elif page == "🔧 Pompe principale":
 
     save_jsonl(data, MESSAGES_FILE)
     st.success("Mesures pompe enregistrées.")
-    st.json(data)
 
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        card("Température moteur", data["pompe_temp_moteur"], "🔥", "°C")
+        card("Vibration", data["pompe_vib"], "📡", "mm/s")
+
+    with col2:
+        card("Intensité électrique", data["pompe_intensite"], "⚡", "A")
+        card("Débit", data["pompe_debit"], "🔄", "m³/h")
+
+    with col3:
+        card("Pression sortie", data["pompe_press_sortie"], "📏", "bar")
+        card(
+            "État pompe",
+            "ON" if data["pompe_etat"] == "ON" else "OFF",
+            "🔘",
+            "",
+            color="#00FF88" if data["pompe_etat"] == "ON" else "#FF4444"
+        )
+
+# -----------------------------
+# PAGE FOUR – DASHBOARD
+# -----------------------------
 elif page == "🏭 Four industriel":
-    st.markdown('<div class="big-title">🏭 Four industriel</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title">🏭 Dashboard – Four industriel</div>', unsafe_allow_html=True)
 
     data = {
         "four_temp_interne": random.uniform(200, 300),
@@ -419,10 +565,40 @@ elif page == "🏭 Four industriel":
 
     save_jsonl(data, MESSAGES_FILE)
     st.success("Mesures four enregistrées.")
-    st.json(data)
 
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        card("Température interne", data["four_temp_interne"], "🔥", "°C")
+        card("Température parois", data["four_temp_parois"], "🔥", "°C")
+
+    with col2:
+        card("Consommation gaz", data["four_conso_gaz"], "🛢️", "Nm³/h")
+        card("Consommation électrique", data["four_conso_elec"], "⚡", "kW")
+
+    with col3:
+        card("Débit air chaud", data["four_debit_air_chaud"], "💨", "m³/h")
+        card(
+            "État brûleur",
+            "ON" if data["four_etat_bruleur"] == "ON" else "OFF",
+            "🔥",
+            "",
+            color="#00FF88" if data["four_etat_bruleur"] == "ON" else "#FF4444"
+        )
+
+    card(
+        "Sécurité four",
+        data["four_securite"],
+        "🚨",
+        "",
+        color="#00FF88" if data["four_securite"] == "OK" else "#FF4444"
+    )
+
+# -----------------------------
+# PAGE GAZ – DASHBOARD
+# -----------------------------
 elif page == "🛢️ Conduites de gaz":
-    st.markdown('<div class="big-title">🛢️ Conduites de gaz</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title">🛢️ Dashboard – Conduites de gaz</div>', unsafe_allow_html=True)
 
     data = {
         "gaz_press": random.uniform(3.5, 4.5),
@@ -434,10 +610,31 @@ elif page == "🛢️ Conduites de gaz":
 
     save_jsonl(data, MESSAGES_FILE)
     st.success("Mesures gaz enregistrées.")
-    st.json(data)
 
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        card("Pression gaz", data["gaz_press"], "📏", "bar")
+        card("Débit gaz", data["gaz_debit"], "🔄", "Nm³/h")
+
+    with col2:
+        card("Température gaz", data["gaz_temp"], "🔥", "°C")
+        progress_bar("Qualité combustion", data["gaz_qualite_combustion"], "📈", "%", max_value=100)
+
+    with col3:
+        card(
+            "Fuite gaz",
+            "OUI" if data["gaz_fuite"] == 1 else "NON",
+            "🚨",
+            "",
+            color="#FF4444" if data["gaz_fuite"] == 1 else "#00FF88"
+        )
+
+# -----------------------------
+# PAGE EAU – DASHBOARD
+# -----------------------------
 elif page == "💧 Conduites d’eau":
-    st.markdown('<div class="big-title">💧 Conduites d’eau</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title">💧 Dashboard – Conduites d’eau</div>', unsafe_allow_html=True)
 
     data = {
         "eau_press": random.uniform(2.5, 3.5),
@@ -449,7 +646,25 @@ elif page == "💧 Conduites d’eau":
 
     save_jsonl(data, MESSAGES_FILE)
     st.success("Mesures eau enregistrées.")
-    st.json(data)
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        card("Pression eau", data["eau_press"], "📏", "bar")
+        card("Débit eau", data["eau_debit"], "🔄", "m³/h")
+
+    with col2:
+        card("Température eau", data["eau_temp"], "💧", "°C")
+        progress_bar("Niveau réservoir", data["eau_niveau_reservoir"], "🧪", "%", max_value=100)
+
+    with col3:
+        card(
+            "Fuite eau",
+            "OUI" if data["eau_fuite"] == 1 else "NON",
+            "🚨",
+            "",
+            color="#FF4444" if data["eau_fuite"] == 1 else "#00FF88"
+        )
 
 # -----------------------------
 # PAGE IA & JUMEAU NUMÉRIQUE
